@@ -1,0 +1,75 @@
+classdef SerialPortApp < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure           matlab.ui.Figure
+        StartButton        matlab.ui.control.Button
+        TextArea           matlab.ui.control.TextArea
+    end
+
+    properties (Access = private)
+        SerialPort         % Serial port object
+    end
+
+    % Callbacks for component events
+    methods (Access = private)
+
+        % Button pushed function: StartButton
+        function StartButtonPushed(app, event)
+            % Configure serial port
+            try
+                app.SerialPort = serialport("COM3", 9600); % Update COM3 to your port
+                configureTerminator(app.SerialPort, "CR/LF"); % Adjust if needed
+                app.TextArea.Value = "Reading data...";
+
+                % Start asynchronous reading
+                configureCallback(app.SerialPort, "terminator", ...
+                    @(src, evt) app.readSerialData());
+            catch ME
+                app.TextArea.Value = sprintf('Error: %s', ME.message);
+            end
+        end
+
+        % Callback to read data
+        function readSerialData(app)
+            try
+                data = readline(app.SerialPort); % Read a line of data
+                app.TextArea.Value = sprintf('%s\n%s', app.TextArea.Value, data);
+            catch ME
+                app.TextArea.Value = sprintf('Error: %s', ME.message);
+            end
+        end
+    end
+
+    % App initialization and component creation
+    methods (Access = private)
+
+        % Create components
+        function createComponents(app)
+
+            % Create UIFigure
+            app.UIFigure = uifigure;
+            app.UIFigure.Position = [100 100 400 300];
+            app.UIFigure.Name = 'Serial Port App';
+
+            % Create StartButton
+            app.StartButton = uibutton(app.UIFigure, 'push');
+            app.StartButton.ButtonPushedFcn = createCallbackFcn(app, @StartButtonPushed, true);
+            app.StartButton.Position = [150 220 100 30];
+            app.StartButton.Text = 'Start';
+
+            % Create TextArea
+            app.TextArea = uitextarea(app.UIFigure);
+            app.TextArea.Position = [50 50 300 150];
+        end
+    end
+
+    % App constructor
+    methods (Access = public)
+
+        function app = SerialPortApp
+            % Create and configure components
+            createComponents(app)
+        end
+    end
+end
